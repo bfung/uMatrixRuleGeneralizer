@@ -50,10 +50,7 @@
       }
     </style>
 
-    <script type="text/javascript">
-      
-    </script>
-</head>
+    </head>
 <body>
   <div class="left inputoutput">
     <span>Rules</span>
@@ -70,5 +67,93 @@
     <span>Compacted</span>
     <textarea name="compacted" id="compacted" readonly="readonly"></textarea> 
   </div>
+
+
+  <script type="text/javascript">
+    function parse(lines) {
+        var compacted = [];
+        var destRules = [];
+
+        for (var i = 0, len = lines.length; i < len; i++) {
+            var line = lines[i];
+            if (line.startsWith("matrix-off: ")) {
+                compacted.push(line);
+            } else {
+                //according to current documentation, the official parser doesn't use "rule: " at all!
+                if (line.startsWith("rule: ")) {
+                    line = line.substring(6, line.length);
+                }
+
+                var rule = line.split(" ");
+                if (rule.length == 2) {
+                    rule.push("*");
+                }
+                if (rule.length == 3) {
+                    rule.push("allow");
+                }
+
+                var key = rule.slice(1, rule.length);
+                var values = destRules[key];
+                if (values) {
+                    if (values.indexOf("*") == -1) {
+                        values.push(rule[0]);
+                    } else {
+                        values = ["*"];
+                    }
+                } else {
+                    values = [rule[0]];
+                }
+                destRules[key] = values;
+            }
+        }
+
+        for (var key in destRules) {
+            var sources = destRules[key];
+            var k = key.split(",");
+            for (var i = 0, len = sources.length; i < len; i++) {
+                var conned = [sources[i]].concat(k);
+                compacted.push(conned.join(" "));
+            }
+        }
+
+        compacted.sort(function(a, b) {
+            if (a.startsWith("matrix-off: ") && b.startsWith("matrix-off: ")) {
+                return a.substring(13, a.length).localeCompare(b.substring(13, b.length));
+            }
+            if (a.startsWith("matrix-off: ")) {
+                return -1;
+            }
+            if (b.startsWith("matrix-off: ")) {
+                return 1;
+            }
+            return a.localeCompare(b);
+        });
+
+        return compacted;
+    }
+
+    function compact() {
+        var compactedText = document.getElementById("compacted");
+        compactedText.value = "";
+
+        var rulesText = document.getElementById("rules").value.trim();
+        if (rulesText.length > 0) {
+            var lines = rulesText.split("\n"); 
+            compacted = parse(lines);
+            compactedText.value = compacted.join("\n");
+        } else {
+            compactedText.value = "There are 0 lines";
+        }
+    }
+
+    window.onload = function() {
+        var element = document.getElementById("convert");
+        if (element.addEventListener) {
+            element.addEventListener("click", compact, false);
+        } else {
+            element.attachEvent("onclick", compact);
+        }
+    }
+  </script>
 </body>
 </html>
